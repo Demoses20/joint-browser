@@ -27,6 +27,10 @@ import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.graphics.drawable.Icon
 import java.net.URLEncoder
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.MobileAds
 
 class MainActivity : Activity() {
 
@@ -44,6 +48,11 @@ class MainActivity : Activity() {
     private lateinit var address: EditText
     private lateinit var pageHost: FrameLayout
     private lateinit var tabCounter: TextView
+
+    // AdMob is created only while the JOINT Browser home page is visible.
+    private var homeAdView: AdView? = null
+    private var adsInitialized = false
+    private var homeAdRequestStarted = false
 
     private val purple = Color.rgb(104, 55, 205)
     private val dark = Color.rgb(19, 20, 28)
@@ -67,6 +76,15 @@ class MainActivity : Activity() {
         )
 
         buildInterface()
+
+        // Initialize Google Mobile Ads once. The banner itself is created
+        // only by showHomePage(), never while a website/search is displayed.
+        MobileAds.initialize(this) {
+            runOnUiThread {
+                adsInitialized = true
+                loadHomeAdIfReady()
+            }
+        }
 
         val shortcutUrl = intent.getStringExtra("shortcut_url")
 
@@ -409,149 +427,85 @@ class MainActivity : Activity() {
 
     private fun showHomePage() {
 
+        // Remove any previous banner before rebuilding the home screen.
+        destroyHomeAd()
         pageHost.removeAllViews()
 
         val home = LinearLayout(this).apply {
-
             orientation = LinearLayout.VERTICAL
-
-            gravity = Gravity.CENTER_HORIZONTAL
-
-            setPadding(
-                dp(20),
-                dp(25),
-                dp(20),
-                dp(15)
-            )
-
             setBackgroundColor(dark)
         }
 
-        home.addView(
+        // The home content can scroll independently. The AdMob banner stays
+        // at the bottom of the home page and is not part of any website page.
+        val scroll = ScrollView(this).apply {
+            isFillViewport = true
+            clipToPadding = false
+        }
+
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(20), dp(18), dp(20), dp(18))
+            minimumHeight = resources.displayMetrics.heightPixels - dp(180)
+        }
+
+        content.addView(
             View(this),
-            LinearLayout.LayoutParams(
-                1,
-                0,
-                1f
-            )
+            LinearLayout.LayoutParams(1, 0, 1f)
         )
 
-        // LOGO
-
+        // JOINT LOGO
         val logo = ImageView(this).apply {
-
             setImageResource(R.drawable.joint_logo)
-
             scaleType = ImageView.ScaleType.FIT_CENTER
         }
-
-        home.addView(
-            logo,
-            LinearLayout.LayoutParams(
-                dp(105),
-                dp(105)
-            )
-        )
+        content.addView(logo, LinearLayout.LayoutParams(dp(105), dp(105)))
 
         // TITLE
-
         val title = TextView(this).apply {
-
             text = "JOINT Browser"
-
             textSize = 25f
-
             setTextColor(white)
-
-            setTypeface(
-                null,
-                Typeface.BOLD
-            )
-
+            setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
-
-            setPadding(
-                0,
-                dp(12),
-                0,
-                dp(6)
-            )
+            setPadding(0, dp(12), 0, dp(6))
         }
-
-        home.addView(title)
+        content.addView(title)
 
         // SUBTITLE
-
         val subtitle = TextView(this).apply {
-
             text = "Browse. Discover. Connect."
-
             textSize = 13f
-
             setTextColor(Color.LTGRAY)
-
             gravity = Gravity.CENTER
         }
+        content.addView(subtitle)
 
-        home.addView(subtitle)
-
-        // GOOGLE SEARCH
-
+        // GOOGLE SEARCH LABEL
         val google = TextView(this).apply {
-
             text = "Google Search"
-
             textSize = 15f
-
             setTextColor(white)
-
             gravity = Gravity.CENTER
-
-            setPadding(
-                0,
-                dp(25),
-                0,
-                dp(10)
-            )
+            setPadding(0, dp(25), 0, dp(10))
         }
-
-        home.addView(google)
+        content.addView(google)
 
         // OPEN JOINT
-
         val jointButton = TextView(this).apply {
-
             text = "J     Open JOINT"
-
             textSize = 17f
-
             setTextColor(white)
-
-            setTypeface(
-                null,
-                Typeface.BOLD
-            )
-
+            setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
-
-            background = rounded(
-                purple,
-                30
-            )
-
-            setPadding(
-                dp(20),
-                dp(15),
-                dp(20),
-                dp(15)
-            )
-
+            background = rounded(purple, 30)
+            setPadding(dp(20), dp(15), dp(20), dp(15))
             setOnClickListener {
                 openWebsite(jointUrl)
             }
         }
-
-        home.addView(
+        content.addView(
             jointButton,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -559,105 +513,100 @@ class MainActivity : Activity() {
             )
         )
 
-        // ADVERTISEMENT
-
-        val adSpace = LinearLayout(this).apply {
-
-            orientation = LinearLayout.VERTICAL
-
-            gravity = Gravity.CENTER
-
-            background = rounded(
-                Color.rgb(35, 36, 47),
-                12
-            )
-
-            setPadding(
-                dp(10),
-                dp(10),
-                dp(10),
-                dp(10)
-            )
-        }
-
-        val adTitle = TextView(this).apply {
-
-            text = "ADVERTISEMENT"
-
-            textSize = 11f
-
-            setTextColor(Color.LTGRAY)
-
-            gravity = Gravity.CENTER
-        }
-
-        val adText = TextView(this).apply {
-
-            text = "AdMob Banner Space"
-
-            textSize = 15f
-
-            setTextColor(white)
-
-            gravity = Gravity.CENTER
-        }
-
-        adSpace.addView(adTitle)
-        adSpace.addView(adText)
-
-        home.addView(
-            adSpace,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(110)
-            ).apply {
-
-                setMargins(
-                    0,
-                    dp(35),
-                    0,
-                    dp(10)
-                )
-            }
+        content.addView(
+            View(this),
+            LinearLayout.LayoutParams(1, 0, 1f)
         )
 
-        // FOOTER
-
-        val footer = TextView(this).apply {
-
-            text = "Powered by JOINT"
-
-            textSize = 12f
-
-            setTextColor(Color.LTGRAY)
-
-            gravity = Gravity.CENTER
-        }
-
-        home.addView(footer)
+        scroll.addView(
+            content,
+            ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
 
         home.addView(
-            View(this),
+            scroll,
             LinearLayout.LayoutParams(
-                1,
+                ViewGroup.LayoutParams.MATCH_PARENT,
                 0,
                 1f
             )
         )
 
-        pageHost.addView(
-            home,
-            FrameLayout.LayoutParams(
-                -1,
-                -1
+        // Dedicated bottom banner area. It exists only on this home page.
+        val adPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setBackgroundColor(Color.rgb(35, 36, 47))
+            setPadding(dp(4), dp(4), dp(4), dp(4))
+        }
+
+        val adLabel = TextView(this).apply {
+            text = "ADVERTISEMENT"
+            textSize = 10f
+            setTextColor(Color.LTGRAY)
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(2))
+        }
+        adPanel.addView(
+            adLabel,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
             )
         )
 
+        val banner = AdView(this).apply {
+            adUnitId = "ca-app-pub-3940256099942544/9214589741" // Google test banner
+            adSize = AdSize.BANNER
+        }
+        homeAdView = banner
+        homeAdRequestStarted = false
+
+        adPanel.addView(
+            banner,
+            LinearLayout.LayoutParams(
+                dp(AdSize.BANNER.width),
+                dp(AdSize.BANNER.height)
+            )
+        )
+
+        home.addView(
+            adPanel,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        pageHost.addView(
+            home,
+            FrameLayout.LayoutParams(-1, -1)
+        )
+
         address.setText("")
-
         address.hint = "Search Google or website"
-
         updateTabCount()
+        loadHomeAdIfReady()
+    }
+
+    private fun loadHomeAdIfReady() {
+        val banner = homeAdView ?: return
+        if (!adsInitialized || homeAdRequestStarted) return
+
+        homeAdRequestStarted = true
+        banner.loadAd(AdRequest.Builder().build())
+    }
+
+    private fun destroyHomeAd() {
+        homeAdView?.let { banner ->
+            banner.pause()
+            banner.destroy()
+        }
+        homeAdView = null
+        homeAdRequestStarted = false
     }
 
     // ==========================================
@@ -882,6 +831,7 @@ class MainActivity : Activity() {
 
         tab.showingHome = false
 
+        destroyHomeAd()
         pageHost.removeAllViews()
 
         pageHost.addView(
@@ -1032,6 +982,7 @@ class MainActivity : Activity() {
 
         } else {
 
+            destroyHomeAd()
             pageHost.removeAllViews()
 
             pageHost.addView(
@@ -1445,7 +1396,19 @@ class MainActivity : Activity() {
     // CLEANUP
     // ==========================================
 
+    override fun onPause() {
+        homeAdView?.pause()
+        super.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        homeAdView?.resume()
+    }
+
     override fun onDestroy() {
+
+        destroyHomeAd()
 
         tabs.forEach {
 
