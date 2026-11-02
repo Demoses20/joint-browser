@@ -553,7 +553,9 @@ class MainActivity : Activity() {
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         ).apply {
-            topMargin = dp(14)
+            // Slightly increase the gap so the advert sits a little lower
+            // beneath the Open JOINT button without moving it far away.
+            topMargin = dp(22)
         }
         content.addView(adPanel, adParams)
 
