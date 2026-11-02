@@ -445,15 +445,12 @@ class MainActivity : Activity() {
 
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
+            // Center the home elements as one group. The ad is placed directly
+            // after the JOINT button instead of being pinned to the screen bottom.
+            gravity = Gravity.CENTER
             setPadding(dp(20), dp(18), dp(20), dp(18))
             minimumHeight = resources.displayMetrics.heightPixels - dp(180)
         }
-
-        content.addView(
-            View(this),
-            LinearLayout.LayoutParams(1, 0, 1f)
-        )
 
         // JOINT LOGO
         val logo = ImageView(this).apply {
@@ -513,29 +510,8 @@ class MainActivity : Activity() {
             )
         )
 
-        content.addView(
-            View(this),
-            LinearLayout.LayoutParams(1, 0, 1f)
-        )
-
-        scroll.addView(
-            content,
-            ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        )
-
-        home.addView(
-            scroll,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            )
-        )
-
-        // Dedicated bottom banner area. It exists only on this home page.
+        // Dedicated home-page banner. It is part of the home content so it
+        // sits just below Open JOINT with a small gap, not at the screen bottom.
         val adPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -573,11 +549,28 @@ class MainActivity : Activity() {
             )
         )
 
+        val adParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply {
+            topMargin = dp(14)
+        }
+        content.addView(adPanel, adParams)
+
+        scroll.addView(
+            content,
+            ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
         home.addView(
-            adPanel,
+            scroll,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
+                0,
+                1f
             )
         )
 
