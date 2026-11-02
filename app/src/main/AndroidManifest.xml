@@ -4,12 +4,12 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
-        android:allowBackup="false"
-        android:label="JOINT Browser"
-        android:icon="@drawable/ic_launcher"
-        android:roundIcon="@drawable/ic_launcher"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar"
-        android:usesCleartextTraffic="false">
+    android:allowBackup="false"
+    android:icon="@drawable/joint_logo"
+    android:roundIcon="@drawable/joint_logo"
+    android:label="JOINT Browser"
+    android:theme="@android:style/Theme.Material.Light.NoActionBar"
+    android:usesCleartextTraffic="false">
 
         <activity
             android:name=".MainActivity"
