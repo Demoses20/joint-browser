@@ -17,6 +17,7 @@ import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -70,11 +71,8 @@ class MainActivity : Activity() {
         val shortcutUrl = intent.getStringExtra("shortcut_url")
 
         if (!shortcutUrl.isNullOrBlank()) {
-
             addTab(shortcutUrl, false)
-
         } else {
-
             addTab("", false)
         }
     }
@@ -88,7 +86,6 @@ class MainActivity : Activity() {
         val shortcutUrl = intent.getStringExtra("shortcut_url")
 
         if (!shortcutUrl.isNullOrBlank()) {
-
             addTab(shortcutUrl, false)
         }
     }
@@ -103,15 +100,13 @@ class MainActivity : Activity() {
     ): GradientDrawable {
 
         return GradientDrawable().apply {
-
             setColor(color)
-
             cornerRadius = dp(radius).toFloat()
         }
     }
 
     // ==========================================
-    // COMPACT CHROME-STYLE INTERFACE
+    // BROWSER INTERFACE
     // ==========================================
 
     private fun buildInterface() {
@@ -121,6 +116,34 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
 
             setBackgroundColor(dark)
+        }
+
+        // AUTOMATIC STATUS BAR SPACING
+        // Keeps browser controls below phone time,
+        // network and battery indicators.
+
+        root.setOnApplyWindowInsetsListener { view, insets ->
+
+            val topInset = if (Build.VERSION.SDK_INT >= 30) {
+
+                insets.getInsets(
+                    WindowInsets.Type.statusBars()
+                ).top
+
+            } else {
+
+                @Suppress("DEPRECATION")
+                insets.systemWindowInsetTop
+            }
+
+            view.setPadding(
+                view.paddingLeft,
+                topInset,
+                view.paddingRight,
+                view.paddingBottom
+            )
+
+            insets
         }
 
         // HEADER
@@ -160,7 +183,7 @@ class MainActivity : Activity() {
             )
         )
 
-        // ADDRESS AND GOOGLE SEARCH BAR
+        // SEARCH AND ADDRESS BAR
 
         address = EditText(this).apply {
 
@@ -223,7 +246,7 @@ class MainActivity : Activity() {
             }
         )
 
-        // HOME BUTTON
+        // HOME
 
         button("⌂", header) {
 
@@ -236,7 +259,7 @@ class MainActivity : Activity() {
             contentDescription = "Home"
         }
 
-        // REFRESH BUTTON
+        // REFRESH
 
         button("↻", header) {
 
@@ -249,7 +272,7 @@ class MainActivity : Activity() {
             contentDescription = "Refresh"
         }
 
-        // NEW TAB BUTTON
+        // NEW TAB
 
         button("+", header) {
 
@@ -296,7 +319,6 @@ class MainActivity : Activity() {
             contentDescription = "Open tabs"
 
             setOnClickListener {
-
                 showTabs()
             }
         }
@@ -309,7 +331,7 @@ class MainActivity : Activity() {
             )
         )
 
-        // THREE-DOT MENU
+        // MENU
 
         button("⋮", header) {
 
@@ -324,7 +346,7 @@ class MainActivity : Activity() {
 
         root.addView(header)
 
-        // WEBSITE DISPLAY AREA
+        // WEBSITE AREA
 
         pageHost = FrameLayout(this)
 
@@ -372,7 +394,6 @@ class MainActivity : Activity() {
             )
 
             setOnClickListener {
-
                 action()
             }
         }
@@ -383,7 +404,7 @@ class MainActivity : Activity() {
     }
 
     // ==========================================
-    // CUSTOM JOINT HOMEPAGE
+    // JOINT HOMEPAGE
     // ==========================================
 
     private fun showHomePage() {
@@ -415,7 +436,7 @@ class MainActivity : Activity() {
             )
         )
 
-        // JOINT LOGO
+        // LOGO
 
         val logo = ImageView(this).apply {
 
@@ -496,7 +517,7 @@ class MainActivity : Activity() {
 
         home.addView(google)
 
-        // OPEN JOINT BUTTON
+        // OPEN JOINT
 
         val jointButton = TextView(this).apply {
 
@@ -526,7 +547,6 @@ class MainActivity : Activity() {
             )
 
             setOnClickListener {
-
                 openWebsite(jointUrl)
             }
         }
@@ -539,7 +559,7 @@ class MainActivity : Activity() {
             )
         )
 
-        // ADVERTISEMENT SPACE
+        // ADVERTISEMENT
 
         val adSpace = LinearLayout(this).apply {
 
@@ -583,7 +603,6 @@ class MainActivity : Activity() {
         }
 
         adSpace.addView(adTitle)
-
         adSpace.addView(adText)
 
         home.addView(
@@ -642,7 +661,7 @@ class MainActivity : Activity() {
     }
 
     // ==========================================
-    // WEB ADDRESS DISPLAY
+    // ADDRESS DISPLAY
     // ==========================================
 
     private fun cleanAddress(url: String?): String {
@@ -660,7 +679,7 @@ class MainActivity : Activity() {
     }
 
     // ==========================================
-    // CREATE BROWSER TAB
+    // WEBVIEW AND TABS
     // ==========================================
 
     private fun addTab(
@@ -714,7 +733,6 @@ class MainActivity : Activity() {
                     uri.scheme == "http" ||
                     uri.scheme == "https"
                 ) {
-
                     return false
                 }
 
@@ -741,9 +759,7 @@ class MainActivity : Activity() {
                 favicon: android.graphics.Bitmap?
             ) {
 
-                if (
-                    tabs.getOrNull(active)?.web === view
-                ) {
+                if (tabs.getOrNull(active)?.web === view) {
 
                     address.setText(
                         cleanAddress(url)
@@ -756,9 +772,7 @@ class MainActivity : Activity() {
                 url: String?
             ) {
 
-                if (
-                    tabs.getOrNull(active)?.web === view
-                ) {
+                if (tabs.getOrNull(active)?.web === view) {
 
                     address.setText(
                         cleanAddress(url)
@@ -800,7 +814,6 @@ class MainActivity : Activity() {
         updateTabCount()
 
         if (url.isNotBlank()) {
-
             openWebsite(url)
         }
     }
@@ -808,17 +821,14 @@ class MainActivity : Activity() {
     private fun currentWeb(): WebView? {
 
         return if (tabs.isEmpty()) {
-
             null
-
         } else {
-
             tabs[active].web
         }
     }
 
     // ==========================================
-    // GOOGLE SEARCH AND WEBSITE NAVIGATION
+    // GOOGLE SEARCH
     // ==========================================
 
     private fun navigateFromAddress() {
@@ -917,7 +927,7 @@ class MainActivity : Activity() {
     }
 
     // ==========================================
-    // ANDROID BACK NAVIGATION
+    // BACK NAVIGATION
     // ==========================================
 
     private fun goBack() {
@@ -938,7 +948,6 @@ class MainActivity : Activity() {
     }
 
     override fun onBackPressed() {
-
         goBack()
     }
 
@@ -1081,9 +1090,7 @@ class MainActivity : Activity() {
 
             "Open private tab",
 
-            "Add page to home screen",
-
-            "Install website in Chrome",
+            "Install website in JOINT Browser",
 
             "Copy page link",
 
@@ -1108,11 +1115,9 @@ class MainActivity : Activity() {
 
                     4 -> pinCurrentPage()
 
-                    5 -> installWebsiteInChrome()
+                    5 -> copyPageLink()
 
-                    6 -> copyPageLink()
-
-                    7 -> openWebsite(jointUrl)
+                    6 -> openWebsite(jointUrl)
                 }
             }
 
@@ -1120,60 +1125,117 @@ class MainActivity : Activity() {
     }
 
     // ==========================================
-    // INSTALL WEBSITE IN CHROME
+    // INBUILT WEBSITE INSTALLATION
     // ==========================================
 
-    private fun installWebsiteInChrome() {
+    // Creates a home-screen icon which opens
+    // the selected website directly inside JOINT.
+    // No Chrome redirection is required.
 
-        val url = currentWeb()?.url ?: jointUrl
+    private fun pinCurrentPage() {
 
-        try {
+        val tab = tabs.getOrNull(active) ?: return
 
-            val chromeIntent = Intent(
-                Intent.ACTION_VIEW,
-                Uri.parse(url)
-            ).apply {
+        val url = tab.web.url ?: if (tab.showingHome) {
 
-                setPackage("com.android.chrome")
-            }
+            jointUrl
 
-            startActivity(chromeIntent)
+        } else {
 
-            Toast.makeText(
-                this,
-                "Open Chrome's menu to install this website if supported",
-                Toast.LENGTH_LONG
-            ).show()
+            return
+        }
 
-        } catch (_: Exception) {
+        val title = (
 
-            try {
+            tab.web.title
+                ?: if (tab.showingHome) "JOINT" else "Website"
 
-                val browserIntent = Intent(
-                    Intent.ACTION_VIEW,
-                    Uri.parse(url)
-                )
+        ).take(25)
 
-                startActivity(
-                    Intent.createChooser(
-                        browserIntent,
-                        "Open website with"
+        if (Build.VERSION.SDK_INT >= 26) {
+
+            val manager = getSystemService(
+                ShortcutManager::class.java
+            )
+
+            if (manager.isRequestPinShortcutSupported) {
+
+                val shortcutIntent = Intent(
+                    this,
+                    MainActivity::class.java
+                ).apply {
+
+                    action = Intent.ACTION_VIEW
+
+                    data = Uri.parse(url)
+
+                    putExtra(
+                        "shortcut_url",
+                        url
                     )
+
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    )
+                }
+
+                val shortcutIcon = tab.web.favicon?.let {
+
+                    Icon.createWithBitmap(it)
+
+                } ?: Icon.createWithResource(
+                    this,
+                    R.drawable.joint_logo
                 )
 
-            } catch (_: Exception) {
+                val shortcut = ShortcutInfo.Builder(
+                    this,
+                    "joint_website_${System.currentTimeMillis()}"
+                )
+
+                    .setShortLabel(title)
+
+                    .setLongLabel(title)
+
+                    .setIcon(shortcutIcon)
+
+                    .setIntent(shortcutIntent)
+
+                    .build()
+
+                manager.requestPinShortcut(
+                    shortcut,
+                    null
+                )
 
                 Toast.makeText(
                     this,
-                    "Unable to open Chrome",
+                    "Installing website shortcut on your home screen",
+                    Toast.LENGTH_LONG
+                ).show()
+
+            } else {
+
+                Toast.makeText(
+                    this,
+                    "Your launcher does not support home-screen installation",
                     Toast.LENGTH_LONG
                 ).show()
             }
+
+        } else {
+
+            Toast.makeText(
+                this,
+                "Home-screen installation requires Android 8 or newer",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
     // ==========================================
-    // DOWNLOAD FILES
+    // DOWNLOADS
     // ==========================================
 
     private fun downloadFile(
@@ -1354,98 +1416,7 @@ class MainActivity : Activity() {
     }
 
     // ==========================================
-    // ADD WEBSITE TO ANDROID HOME SCREEN
-    // ==========================================
-
-    private fun pinCurrentPage() {
-
-        val tab = tabs.getOrNull(active) ?: return
-
-        val url = tab.web.url ?: if (tab.showingHome) {
-
-            jointUrl
-
-        } else {
-
-            return
-        }
-
-        val title = (
-
-            tab.web.title
-                ?: if (tab.showingHome) "JOINT" else "Website"
-
-        ).take(25)
-
-        if (Build.VERSION.SDK_INT >= 26) {
-
-            val manager = getSystemService(
-                ShortcutManager::class.java
-            )
-
-            if (manager.isRequestPinShortcutSupported) {
-
-                val shortcutIntent = Intent(
-                    this,
-                    MainActivity::class.java
-                ).apply {
-
-                    putExtra(
-                        "shortcut_url",
-                        url
-                    )
-                }
-
-                val shortcutIcon = tab.web.favicon?.let {
-
-                    Icon.createWithBitmap(it)
-
-                } ?: Icon.createWithResource(
-                    this,
-                    R.drawable.joint_logo
-                )
-
-                val shortcut = ShortcutInfo.Builder(
-                    this,
-                    "page_${System.currentTimeMillis()}"
-                )
-
-                    .setShortLabel(title)
-
-                    .setLongLabel(title)
-
-                    .setIcon(shortcutIcon)
-
-                    .setIntent(shortcutIntent)
-
-                    .build()
-
-                manager.requestPinShortcut(
-                    shortcut,
-                    null
-                )
-
-            } else {
-
-                Toast.makeText(
-                    this,
-                    "Launcher does not support shortcuts",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-
-        } else {
-
-            Toast.makeText(
-                this,
-                "Shortcuts require Android 8 or newer",
-                Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-
-    // ==========================================
-    // COPY WEBSITE LINK
+    // COPY PAGE LINK
     // ==========================================
 
     private fun copyPageLink() {
