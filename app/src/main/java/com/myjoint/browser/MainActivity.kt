@@ -17,6 +17,7 @@ import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.webkit.*
@@ -40,7 +41,7 @@ class MainActivity : Activity() {
     private lateinit var root: LinearLayout
     private lateinit var address: EditText
     private lateinit var pageHost: FrameLayout
-    private lateinit var tabLabel: TextView
+    private lateinit var tabCounter: TextView
 
     private val purple = Color.rgb(104, 55, 205)
     private val dark = Color.rgb(19, 20, 28)
@@ -54,19 +55,46 @@ class MainActivity : Activity() {
         window.statusBarColor = dark
         window.navigationBarColor = dark
 
+        window.setSoftInputMode(
+            WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+        )
+
         buildInterface()
-        addTab("", false)
+
+        val shortcutUrl = intent.getStringExtra("shortcut_url")
+
+        if (!shortcutUrl.isNullOrBlank()) {
+            addTab(shortcutUrl, false)
+        } else {
+            addTab("", false)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+
+        val shortcutUrl = intent.getStringExtra("shortcut_url")
+
+        if (!shortcutUrl.isNullOrBlank()) {
+            addTab(shortcutUrl, false)
+        }
     }
 
     private fun rounded(
         color: Int,
         radius: Int
     ): GradientDrawable {
+
         return GradientDrawable().apply {
             setColor(color)
             cornerRadius = dp(radius).toFloat()
         }
     }
+
+    // ==========================================
+    // BROWSER INTERFACE
+    // ==========================================
 
     private fun buildInterface() {
 
@@ -80,7 +108,7 @@ class MainActivity : Activity() {
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(12), dp(8), dp(8), dp(8))
+            setPadding(dp(8), dp(5), dp(5), dp(5))
             setBackgroundColor(dark)
         }
 
@@ -92,15 +120,15 @@ class MainActivity : Activity() {
 
         header.addView(
             logo,
-            LinearLayout.LayoutParams(dp(48), dp(48))
+            LinearLayout.LayoutParams(dp(42), dp(42))
         )
 
         val brand = TextView(this).apply {
             text = "JOINT"
-            textSize = 19f
+            textSize = 18f
             setTextColor(white)
             setTypeface(null, Typeface.BOLD)
-            setPadding(dp(8), 0, 0, 0)
+            setPadding(dp(6), 0, 0, 0)
         }
 
         header.addView(
@@ -108,27 +136,72 @@ class MainActivity : Activity() {
             LinearLayout.LayoutParams(0, -2, 1f)
         )
 
+        // HOME BUTTON
+
+        button("⌂", header) {
+            showHome()
+        }.contentDescription = "Home"
+
+        // REFRESH BUTTON
+
+        button("↻", header) {
+            refreshPage()
+        }.contentDescription = "Refresh"
+
+        // NEW TAB
+
         button("+", header) {
             addTab("", false)
         }.contentDescription = "New tab"
 
-        button("▢", header) {
-            showTabs()
-        }.contentDescription = "Tabs"
+        // TAB COUNTER
+
+        tabCounter = TextView(this).apply {
+            text = "1"
+            textSize = 15f
+            gravity = Gravity.CENTER
+            setTextColor(white)
+            setTypeface(null, Typeface.BOLD)
+            background = rounded(
+                Color.rgb(43, 43, 55),
+                9
+            )
+            minWidth = dp(34)
+            setPadding(dp(7), dp(5), dp(7), dp(5))
+            contentDescription = "Open tabs"
+            setOnClickListener {
+                showTabs()
+            }
+        }
+
+        header.addView(
+            tabCounter,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                dp(34)
+            ).apply {
+                setMargins(dp(2), 0, dp(2), 0)
+            }
+        )
+
+        // MENU
 
         button("⋮", header) {
             showMenu()
-        }.contentDescription = "Menu"
+        }.contentDescription = "Browser menu"
 
         root.addView(header)
 
-        // COMBINED ADDRESS AND GOOGLE SEARCH BAR
+        // ADDRESS AND GOOGLE SEARCH BAR
 
         val searchContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(12), 0, dp(12), 0)
-            background = rounded(Color.rgb(43, 43, 55), 30)
+            background = rounded(
+                Color.rgb(43, 43, 55),
+                30
+            )
         }
 
         val searchIcon = TextView(this).apply {
@@ -144,13 +217,21 @@ class MainActivity : Activity() {
         )
 
         address = EditText(this).apply {
+
             hint = "Search Google or enter website"
+
             setSingleLine(true)
+
             textSize = 14f
+
             setTextColor(white)
+
             setHintTextColor(Color.LTGRAY)
+
             setPadding(dp(5), 0, dp(5), 0)
+
             setBackgroundColor(Color.TRANSPARENT)
+
             imeOptions = EditorInfo.IME_ACTION_GO
 
             setOnEditorActionListener { _, action, _ ->
@@ -178,22 +259,16 @@ class MainActivity : Activity() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 dp(48)
             ).apply {
-                setMargins(dp(12), dp(4), dp(12), dp(8))
+                setMargins(
+                    dp(12),
+                    dp(4),
+                    dp(12),
+                    dp(8)
+                )
             }
         )
 
-        // TAB INFORMATION
-
-        tabLabel = TextView(this).apply {
-            text = "JOINT Browser"
-            textSize = 11f
-            setTextColor(Color.LTGRAY)
-            setPadding(dp(14), 0, dp(14), dp(5))
-        }
-
-        root.addView(tabLabel)
-
-        // PAGE AREA
+        // WEBSITE DISPLAY AREA
 
         pageHost = FrameLayout(this)
 
@@ -206,36 +281,12 @@ class MainActivity : Activity() {
             )
         )
 
-        // BOTTOM NAVIGATION
-
-        val bottom = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setPadding(dp(5), dp(5), dp(5), dp(5))
-            setBackgroundColor(Color.rgb(30, 30, 40))
-        }
-
-        button("‹", bottom) {
-            goBack()
-        }
-
-        button("›", bottom) {
-            currentWeb()?.let {
-                if (it.canGoForward()) it.goForward()
-            }
-        }
-
-        button("⌂", bottom) {
-            showHome()
-        }
-
-        button("↻", bottom) {
-            currentWeb()?.reload()
-        }
-
-        root.addView(bottom)
+        // NO BOTTOM BROWSER NAVIGATION
+        // WEBSITES NOW USE THE AVAILABLE SCREEN SPACE.
 
         setContentView(root)
+
+        updateTabCount()
     }
 
     private fun button(
@@ -245,13 +296,27 @@ class MainActivity : Activity() {
     ): TextView {
 
         val v = TextView(this).apply {
+
             text = label
-            textSize = 24f
+
+            textSize = 23f
+
             gravity = Gravity.CENTER
+
             setTextColor(white)
-            minWidth = dp(42)
-            setPadding(dp(8), dp(5), dp(8), dp(5))
-            setOnClickListener { action() }
+
+            minWidth = dp(38)
+
+            setPadding(
+                dp(5),
+                dp(5),
+                dp(5),
+                dp(5)
+            )
+
+            setOnClickListener {
+                action()
+            }
         }
 
         parent.addView(v)
@@ -259,7 +324,9 @@ class MainActivity : Activity() {
         return v
     }
 
+    // ==========================================
     // CUSTOM JOINT HOMEPAGE
+    // ==========================================
 
     private fun showHomePage() {
 
@@ -268,18 +335,19 @@ class MainActivity : Activity() {
         val home = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(dp(20), dp(25), dp(20), dp(15))
+            setPadding(
+                dp(20),
+                dp(25),
+                dp(20),
+                dp(15)
+            )
             setBackgroundColor(dark)
         }
 
-        val space = View(this)
-
         home.addView(
-            space,
+            View(this),
             LinearLayout.LayoutParams(1, 0, 1f)
         )
-
-        // JOINT LOGO
 
         val logo = ImageView(this).apply {
             setImageResource(R.drawable.joint_logo)
@@ -288,7 +356,10 @@ class MainActivity : Activity() {
 
         home.addView(
             logo,
-            LinearLayout.LayoutParams(dp(105), dp(105))
+            LinearLayout.LayoutParams(
+                dp(105),
+                dp(105)
+            )
         )
 
         val title = TextView(this).apply {
@@ -311,8 +382,6 @@ class MainActivity : Activity() {
 
         home.addView(subtitle)
 
-        // GOOGLE SEARCH DESCRIPTION
-
         val google = TextView(this).apply {
             text = "Google Search"
             textSize = 15f
@@ -323,16 +392,28 @@ class MainActivity : Activity() {
 
         home.addView(google)
 
-        // JOINT WEBSITE BUTTON
+        // OPEN JOINT
 
         val jointButton = TextView(this).apply {
+
             text = "J     Open JOINT"
+
             textSize = 17f
+
             setTextColor(white)
+
             setTypeface(null, Typeface.BOLD)
+
             gravity = Gravity.CENTER
+
             background = rounded(purple, 30)
-            setPadding(dp(20), dp(15), dp(20), dp(15))
+
+            setPadding(
+                dp(20),
+                dp(15),
+                dp(20),
+                dp(15)
+            )
 
             setOnClickListener {
                 openWebsite(jointUrl)
@@ -347,13 +428,21 @@ class MainActivity : Activity() {
             )
         )
 
-        // ADMOB ADVERTISING SPACE
+        // ADMOB SPACE
 
         val adSpace = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            background = rounded(Color.rgb(35, 36, 47), 12)
-            setPadding(dp(10), dp(10), dp(10), dp(10))
+            background = rounded(
+                Color.rgb(35, 36, 47),
+                12
+            )
+            setPadding(
+                dp(10),
+                dp(10),
+                dp(10),
+                dp(10)
+            )
         }
 
         val adTitle = TextView(this).apply {
@@ -379,7 +468,12 @@ class MainActivity : Activity() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 dp(110)
             ).apply {
-                setMargins(0, dp(35), 0, dp(10))
+                setMargins(
+                    0,
+                    dp(35),
+                    0,
+                    dp(10)
+                )
             }
         )
 
@@ -408,20 +502,33 @@ class MainActivity : Activity() {
         updateTabCount()
     }
 
-    // CREATE BROWSER TAB
+    // ==========================================
+    // WEBVIEW AND TABS
+    // ==========================================
 
-    private fun addTab(url: String, privateMode: Boolean) {
+    private fun addTab(
+        url: String,
+        privateMode: Boolean
+    ) {
 
         val web = WebView(this)
 
         web.settings.apply {
+
             javaScriptEnabled = true
+
             domStorageEnabled = true
+
             loadsImagesAutomatically = true
+
             javaScriptCanOpenWindowsAutomatically = false
+
             setSupportMultipleWindows(false)
+
             allowFileAccess = false
+
             allowContentAccess = false
+
             mediaPlaybackRequiresUserGesture = true
 
             if (privateMode) {
@@ -446,11 +553,21 @@ class MainActivity : Activity() {
                 if (
                     uri.scheme == "http" ||
                     uri.scheme == "https"
-                ) return false
+                ) {
+                    return false
+                }
 
                 return try {
-                    startActivity(Intent(Intent.ACTION_VIEW, uri))
+
+                    startActivity(
+                        Intent(
+                            Intent.ACTION_VIEW,
+                            uri
+                        )
+                    )
+
                     true
+
                 } catch (_: Exception) {
                     true
                 }
@@ -461,11 +578,11 @@ class MainActivity : Activity() {
                 url: String?,
                 favicon: android.graphics.Bitmap?
             ) {
+
                 if (tabs.getOrNull(active)?.web === view) {
+
                     address.setText(
-                        url?.removePrefix("https://")
-                            ?.removePrefix("http://")
-                            ?.trimEnd('/') ?: ""
+                        cleanAddress(url)
                     )
                 }
             }
@@ -474,11 +591,11 @@ class MainActivity : Activity() {
                 view: WebView?,
                 url: String?
             ) {
+
                 if (tabs.getOrNull(active)?.web === view) {
+
                     address.setText(
-                        url?.removePrefix("https://")
-                            ?.removePrefix("http://")
-                            ?.trimEnd('/') ?: ""
+                        cleanAddress(url)
                     )
                 }
             }
@@ -487,7 +604,13 @@ class MainActivity : Activity() {
         web.webChromeClient = WebChromeClient()
 
         web.setDownloadListener(
-            DownloadListener { downloadUrl, userAgent, disposition, mimeType, _ ->
+            DownloadListener {
+                    downloadUrl,
+                    userAgent,
+                    disposition,
+                    mimeType,
+                    _ ->
+
                 downloadFile(
                     downloadUrl,
                     userAgent,
@@ -505,16 +628,34 @@ class MainActivity : Activity() {
 
         showHomePage()
 
+        updateTabCount()
+
         if (url.isNotBlank()) {
             openWebsite(url)
         }
     }
 
-    private fun currentWeb(): WebView? {
-        return if (tabs.isEmpty()) null else tabs[active].web
+    private fun cleanAddress(url: String?): String {
+
+        return url
+            ?.removePrefix("https://")
+            ?.removePrefix("http://")
+            ?.trimEnd('/')
+            ?: ""
     }
 
+    private fun currentWeb(): WebView? {
+
+        return if (tabs.isEmpty()) {
+            null
+        } else {
+            tabs[active].web
+        }
+    }
+
+    // ==========================================
     // SEARCH AND WEBSITE NAVIGATION
+    // ==========================================
 
     private fun navigateFromAddress() {
 
@@ -526,21 +667,30 @@ class MainActivity : Activity() {
             input.startsWith("http://", true) ||
             input.startsWith("https://", true)
         ) {
+
             input
+
         } else if (
             input.startsWith("www.", true) ||
-            (input.contains(".") && !input.contains(" "))
+            (
+                input.contains(".") &&
+                !input.contains(" ")
+            )
         ) {
+
             "https://$input"
+
         } else {
+
             "https://www.google.com/search?q=" +
                 URLEncoder.encode(input, "UTF-8")
         }
 
         openWebsite(target)
 
-        val manager = getSystemService(INPUT_METHOD_SERVICE)
-                as InputMethodManager
+        val manager = getSystemService(
+            INPUT_METHOD_SERVICE
+        ) as InputMethodManager
 
         manager.hideSoftInputFromWindow(
             address.windowToken,
@@ -568,7 +718,9 @@ class MainActivity : Activity() {
         updateTabCount()
     }
 
-    // HOME
+    // ==========================================
+    // HOME AND REFRESH
+    // ==========================================
 
     private fun showHome() {
 
@@ -579,20 +731,53 @@ class MainActivity : Activity() {
         showHomePage()
     }
 
-    // BACK
+    private fun refreshPage() {
+
+        val tab = tabs.getOrNull(active) ?: return
+
+        if (tab.showingHome) {
+
+            showHomePage()
+
+        } else {
+
+            tab.web.reload()
+        }
+    }
+
+    // ==========================================
+    // BACK NAVIGATION
+    // ==========================================
 
     private fun goBack() {
 
         val tab = tabs.getOrNull(active) ?: return
 
         if (!tab.showingHome && tab.web.canGoBack()) {
+
             tab.web.goBack()
+
         } else {
+
             showHome()
         }
     }
 
+    override fun onBackPressed() {
+        goBack()
+    }
+
+    // ==========================================
     // TAB MANAGEMENT
+    // ==========================================
+
+    private fun updateTabCount() {
+
+        tabCounter.text = tabs.size.toString()
+
+        tabCounter.contentDescription =
+            "${tabs.size} open tabs"
+    }
 
     private fun showTabs() {
 
@@ -602,25 +787,43 @@ class MainActivity : Activity() {
 
             "${if (i == active) "✓ " else ""}" +
                 "${if (tab.privateMode) "Private" else "Tab"} ${i + 1} — " +
-                "${if (tab.showingHome) "JOINT Homepage" else tab.web.title ?: tab.web.url ?: "Website"}"
+                "${
+                    if (tab.showingHome) {
+                        "JOINT Homepage"
+                    } else {
+                        tab.web.title
+                            ?: tab.web.url
+                            ?: "Website"
+                    }
+                }"
 
         }.toMutableList()
 
         names.add("＋ New tab")
 
         AlertDialog.Builder(this)
+
             .setTitle("Browser Tabs (${tabs.size})")
-            .setItems(names.toTypedArray()) { _, which ->
+
+            .setItems(
+                names.toTypedArray()
+            ) { _, which ->
 
                 if (which == tabs.size) {
+
                     addTab("", false)
+
                 } else {
+
                     switchTab(which)
                 }
             }
+
             .setNeutralButton("Close current") { _, _ ->
+
                 closeCurrentTab()
             }
+
             .show()
     }
 
@@ -633,8 +836,11 @@ class MainActivity : Activity() {
         val tab = tabs[active]
 
         if (tab.showingHome) {
+
             showHomePage()
+
         } else {
+
             pageHost.removeAllViews()
 
             pageHost.addView(
@@ -643,10 +849,7 @@ class MainActivity : Activity() {
             )
 
             address.setText(
-                tab.web.url
-                    ?.removePrefix("https://")
-                    ?.removePrefix("http://")
-                    ?: ""
+                cleanAddress(tab.web.url)
             )
         }
 
@@ -660,22 +863,26 @@ class MainActivity : Activity() {
         val old = tabs.removeAt(active)
 
         old.web.stopLoading()
+
         old.web.destroy()
 
         if (tabs.isEmpty()) {
+
             addTab("", false)
+
         } else {
+
             active = (active - 1).coerceAtLeast(0)
+
             switchTab(active)
         }
+
+        updateTabCount()
     }
 
-    private fun updateTabCount() {
-        tabLabel.text =
-            "JOINT Browser  •  ${tabs.size} tab(s)"
-    }
-
-    // MENU
+    // ==========================================
+    // BROWSER MENU
+    // ==========================================
 
     private fun showMenu() {
 
@@ -685,28 +892,96 @@ class MainActivity : Activity() {
             "Bookmarks",
             "Open private tab",
             "Add page to home screen",
+            "Install website in Chrome",
             "Copy page link",
             "Open JOINT website"
         )
 
         AlertDialog.Builder(this)
+
             .setTitle("JOINT Browser")
+
             .setItems(items) { _, which ->
 
                 when (which) {
+
                     0 -> openDownloads()
+
                     1 -> saveBookmark()
+
                     2 -> showBookmarks()
+
                     3 -> addTab("", true)
+
                     4 -> pinCurrentPage()
-                    5 -> copyPageLink()
-                    6 -> openWebsite(jointUrl)
+
+                    5 -> installWebsiteInChrome()
+
+                    6 -> copyPageLink()
+
+                    7 -> openWebsite(jointUrl)
                 }
             }
+
             .show()
     }
 
+    // ==========================================
+    // INSTALL WEBSITE USING CHROME
+    // ==========================================
+
+    private fun installWebsiteInChrome() {
+
+        val url = currentWeb()?.url ?: jointUrl
+
+        try {
+
+            val chromeIntent = Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse(url)
+            ).apply {
+
+                setPackage("com.android.chrome")
+            }
+
+            startActivity(chromeIntent)
+
+            Toast.makeText(
+                this,
+                "Open Chrome's menu to install this website if supported",
+                Toast.LENGTH_LONG
+            ).show()
+
+        } catch (_: Exception) {
+
+            try {
+
+                val browserIntent = Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse(url)
+                )
+
+                startActivity(
+                    Intent.createChooser(
+                        browserIntent,
+                        "Open website with"
+                    )
+                )
+
+            } catch (_: Exception) {
+
+                Toast.makeText(
+                    this,
+                    "Unable to open Chrome",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    // ==========================================
     // DOWNLOADS
+    // ==========================================
 
     private fun downloadFile(
         url: String,
@@ -728,7 +1003,11 @@ class MainActivity : Activity() {
             )
 
             request.setTitle(filename)
-            request.setDescription("Downloading with JOINT Browser")
+
+            request.setDescription(
+                "Downloading with JOINT Browser"
+            )
+
             request.setMimeType(mime)
 
             request.addRequestHeader(
@@ -739,7 +1018,10 @@ class MainActivity : Activity() {
             CookieManager.getInstance()
                 .getCookie(url)
                 ?.let {
-                    request.addRequestHeader("Cookie", it)
+                    request.addRequestHeader(
+                        "Cookie",
+                        it
+                    )
                 }
 
             request.setNotificationVisibility(
@@ -751,8 +1033,9 @@ class MainActivity : Activity() {
                 filename
             )
 
-            val manager = getSystemService(DOWNLOAD_SERVICE)
-                    as DownloadManager
+            val manager = getSystemService(
+                DOWNLOAD_SERVICE
+            ) as DownloadManager
 
             manager.enqueue(request)
 
@@ -775,10 +1058,13 @@ class MainActivity : Activity() {
     private fun openDownloads() {
 
         try {
+
             startActivity(
                 Intent(DownloadManager.ACTION_VIEW_DOWNLOADS)
             )
+
         } catch (_: Exception) {
+
             startActivity(
                 Intent(
                     Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -788,7 +1074,9 @@ class MainActivity : Activity() {
         }
     }
 
+    // ==========================================
     // BOOKMARKS
+    // ==========================================
 
     private fun saveBookmark() {
 
@@ -830,16 +1118,20 @@ class MainActivity : Activity() {
         )?.toList() ?: emptyList()
 
         if (saved.isEmpty()) {
+
             Toast.makeText(
                 this,
                 "No bookmarks yet",
                 Toast.LENGTH_SHORT
             ).show()
+
             return
         }
 
         AlertDialog.Builder(this)
+
             .setTitle("Bookmarks")
+
             .setItems(
                 saved.map {
                     it.substringAfter("|", it)
@@ -850,18 +1142,30 @@ class MainActivity : Activity() {
                     saved[which].substringAfter("|")
                 )
             }
+
             .setNegativeButton("Close", null)
+
             .show()
     }
 
-    // ADD TO HOME SCREEN
+    // ==========================================
+    // ADD WEBSITE TO ANDROID HOME SCREEN
+    // ==========================================
 
     private fun pinCurrentPage() {
 
-        val url = currentWeb()?.url ?: return
+        val tab = tabs.getOrNull(active) ?: return
 
-        val title = currentWeb()?.title
-            ?.take(25) ?: "Website"
+        val url = tab.web.url ?: if (tab.showingHome) {
+            jointUrl
+        } else {
+            return
+        }
+
+        val title = (
+            tab.web.title
+                ?: if (tab.showingHome) "JOINT" else "Website"
+            ).take(25)
 
         if (Build.VERSION.SDK_INT >= 26) {
 
@@ -871,27 +1175,40 @@ class MainActivity : Activity() {
 
             if (manager.isRequestPinShortcutSupported) {
 
+                val shortcutIntent = Intent(
+                    this,
+                    MainActivity::class.java
+                ).apply {
+
+                    putExtra("shortcut_url", url)
+                }
+
+                val shortcutIcon = tab.web.favicon?.let {
+                    Icon.createWithBitmap(it)
+                } ?: Icon.createWithResource(
+                    this,
+                    R.drawable.joint_logo
+                )
+
                 val shortcut = ShortcutInfo.Builder(
                     this,
                     "page_${System.currentTimeMillis()}"
                 )
+
                     .setShortLabel(title)
+
                     .setLongLabel(title)
-                    .setIcon(
-                        Icon.createWithResource(
-                            this,
-                            R.drawable.joint_logo
-                        )
-                    )
-                    .setIntent(
-                        Intent(
-                            this,
-                            MainActivity::class.java
-                        ).putExtra("shortcut_url", url)
-                    )
+
+                    .setIcon(shortcutIcon)
+
+                    .setIntent(shortcutIntent)
+
                     .build()
 
-                manager.requestPinShortcut(shortcut, null)
+                manager.requestPinShortcut(
+                    shortcut,
+                    null
+                )
 
             } else {
 
@@ -912,17 +1229,23 @@ class MainActivity : Activity() {
         }
     }
 
+    // ==========================================
     // COPY LINK
+    // ==========================================
 
     private fun copyPageLink() {
 
         val url = currentWeb()?.url ?: return
 
-        val clipboard = getSystemService(CLIPBOARD_SERVICE)
-                as ClipboardManager
+        val clipboard = getSystemService(
+            CLIPBOARD_SERVICE
+        ) as ClipboardManager
 
         clipboard.setPrimaryClip(
-            ClipData.newPlainText("Website", url)
+            ClipData.newPlainText(
+                "Website",
+                url
+            )
         )
 
         Toast.makeText(
@@ -932,14 +1255,16 @@ class MainActivity : Activity() {
         ).show()
     }
 
-    override fun onBackPressed() {
-        goBack()
-    }
+    // ==========================================
+    // CLEANUP
+    // ==========================================
 
     override fun onDestroy() {
 
         tabs.forEach {
+
             it.web.stopLoading()
+
             it.web.destroy()
         }
 
@@ -949,6 +1274,7 @@ class MainActivity : Activity() {
     }
 
     private fun dp(value: Int): Int {
+
         return (
             value * resources.displayMetrics.density
         ).toInt()
