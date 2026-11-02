@@ -63,7 +63,7 @@ class MainActivity : Activity() {
 
         address = EditText(this).apply {
             hint = "Search Google or enter website"
-            singleLine = true
+            setSingleLine(true)
             textSize = 15f
             setTextColor(Color.WHITE)
             setHintTextColor(Color.LTGRAY)
