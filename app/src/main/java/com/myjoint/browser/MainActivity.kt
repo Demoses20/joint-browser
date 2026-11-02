@@ -560,7 +560,7 @@ class MainActivity : Activity() {
 
         val banner = AdView(this).apply {
             adUnitId = "ca-app-pub-3940256099942544/9214589741" // Google test banner
-            adSize = AdSize.BANNER
+            setAdSize(AdSize.BANNER)
         }
         homeAdView = banner
         homeAdRequestStarted = false
